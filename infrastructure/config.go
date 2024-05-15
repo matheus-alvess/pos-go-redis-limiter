@@ -5,12 +5,14 @@ import (
 	"github.com/joho/godotenv"
 	"os"
 	"strconv"
+	"time"
 )
 
 type Config struct {
-	RedisAddress       string
-	RateLimitPerSecond int
-	BandDuration       string
+	RedisAddress            string
+	IpRateLimitPerSecond    int
+	TokenRateLimitPerSecond int
+	GeneralTimeBan          time.Duration
 }
 
 func Load() (*Config, error) {
@@ -24,24 +26,40 @@ func Load() (*Config, error) {
 		return nil, errors.New("REDIS_ADDR config notfound")
 	}
 
-	rateLimitPerSecond, ok := os.LookupEnv("RATE_LIMIT_PER_SECOND")
+	ipRateLimitPerSecond, ok := os.LookupEnv("IP_RATE_LIMIT_PER_SECOND")
 	if !ok {
-		return nil, errors.New("RATE_LIMIT_PER_SECOND config notfound")
+		return nil, errors.New("IP_RATE_LIMIT_PER_SECOND config notfound")
 	}
 
-	rateLimitPerSecondValue, err := strconv.Atoi(rateLimitPerSecond)
+	ipRateLimitPerSecondValue, err := strconv.Atoi(ipRateLimitPerSecond)
 	if err != nil {
 		return nil, err
 	}
 
-	banDuration, ok := os.LookupEnv("BAN_DURATION")
+	tokenRateLimitPerSecond, ok := os.LookupEnv("TOKEN_RATE_LIMIT_PER_SECOND")
 	if !ok {
-		return nil, errors.New("BAN_DURATION config notfound")
+		return nil, errors.New("TOKEN_RATE_LIMIT_PER_SECOND config notfound")
+	}
+
+	tokenRateLimitPerSecondValue, err := strconv.Atoi(tokenRateLimitPerSecond)
+	if err != nil {
+		return nil, err
+	}
+
+	generalTimeBan, ok := os.LookupEnv("GENERAL_TIME_BAN")
+	if !ok {
+		return nil, errors.New("GENERAL_TIME_BAN config notfound")
+	}
+
+	generalTimeBanValue, err := time.ParseDuration(generalTimeBan)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Config{
-		RedisAddress:       redisAddress,
-		RateLimitPerSecond: rateLimitPerSecondValue,
-		BandDuration:       banDuration,
+		RedisAddress:            redisAddress,
+		IpRateLimitPerSecond:    ipRateLimitPerSecondValue,
+		TokenRateLimitPerSecond: tokenRateLimitPerSecondValue,
+		GeneralTimeBan:          generalTimeBanValue,
 	}, nil
 }

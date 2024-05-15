@@ -2,8 +2,8 @@ package application
 
 import (
 	"context"
-	"log"
 	"pos-go-redis-limiter/port"
+	"time"
 )
 
 type rateLimiterServiceHandler struct {
@@ -16,18 +16,6 @@ func NewRateLimiterService(rateLimiterRepository port.RateLimiterRepository) por
 	}
 }
 
-func (r rateLimiterServiceHandler) Allow(ctx context.Context, ip string, secondsInterval int) error {
-	res, err := r.rateLimiterRepository.Allow(ctx, ip, secondsInterval)
-	if err != nil {
-		log.Printf("Rate limit Error: %s", err.Error())
-		return err
-	}
-
-	log.Printf("Request Received for IP: %s, ALLOWED: %d, REMAINING: %d", ip, res.Allowed, res.Remaining)
-
-	if res.Allowed == 0 {
-		return ErrLimitExceeded
-	}
-
-	return nil
+func (r *rateLimiterServiceHandler) Allow(ctx context.Context, key string, limit int, duration time.Duration) (bool, error) {
+	return r.rateLimiterRepository.Allow(ctx, key, limit, duration)
 }

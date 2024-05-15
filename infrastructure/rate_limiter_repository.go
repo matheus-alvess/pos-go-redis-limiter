@@ -2,24 +2,36 @@ package infrastructure
 
 import (
 	"context"
+	"github.com/go-redis/redis/v8"
 	"github.com/go-redis/redis_rate/v9"
+	"pos-go-redis-limiter/port"
+	"time"
 )
 
-type RateLimiterRepositoryImpl struct {
-	redisClient  *RedisClient
+type rateLimiterRepositoryHandler struct {
+	client       *redis.Client
 	redisLimiter *redis_rate.Limiter
 }
 
-func NewRateLimiterRepository(config *Config) *RateLimiterRepositoryImpl {
-	redisClient := NewRedisClient(config)
-	limiter := redis_rate.NewLimiter(redisClient.client)
+func NewRateLimiterRepository(instanceWrapperRedis RedisClient) port.RateLimiterRepository {
+	redisClient := instanceWrapperRedis.Client()
+	limiter := redis_rate.NewLimiter(redisClient)
 
-	return &RateLimiterRepositoryImpl{
-		redisClient:  redisClient,
+	return &rateLimiterRepositoryHandler{
+		client:       redisClient,
 		redisLimiter: limiter,
 	}
 }
 
-func (r *RateLimiterRepositoryImpl) Allow(ctx context.Context, key string, secondsInterval int) (*redis_rate.Result, error) {
-	return r.redisLimiter.Allow(ctx, key, redis_rate.PerMinute(secondsInterval))
+func (r *rateLimiterRepositoryHandler) Allow(ctx context.Context, key string, limit int, duration time.Duration) (bool, error) {
+	val, err := r.client.Incr(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+
+	if val == 1 {
+		r.client.Expire(ctx, key, duration)
+	}
+
+	return val <= int64(limit), nil
 }

@@ -2,27 +2,39 @@ package application
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
+	"pos-go-redis-limiter/infrastructure"
 	"pos-go-redis-limiter/port"
 )
 
-func RateLimitMiddleware(rateLimiterService port.RateLimiterService, rateLimitAddressPerSecond int) gin.HandlerFunc {
+func RateLimitMiddleware(rateLimiterService port.RateLimiterService, config *infrastructure.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
-		ctx := context.TODO()
-		//apiToken := c.Request.Header["API_KEY"]
+		var (
+			ip        = c.ClientIP()
+			ctx       = context.TODO()
+			apiToken  = c.Request.Header.Get("API_KEY")
+			limitTime = config.IpRateLimitPerSecond
+			keyLock   = ip
+		)
 
-		err := rateLimiterService.Allow(ctx, ip, rateLimitAddressPerSecond)
+		if apiToken != "" {
+			limitTime = config.TokenRateLimitPerSecond
+			keyLock = fmt.Sprintf("%s:%s", ip, apiToken)
+		}
+
+		ok, err := rateLimiterService.Allow(ctx, keyLock, limitTime, config.GeneralTimeBan)
 		if err != nil {
-			if errors.Is(err, ErrLimitExceeded) {
-				c.String(http.StatusTooManyRequests, err.Error())
-			} else {
-				c.String(http.StatusInternalServerError, err.Error())
-				log.Print("RateLimitMiddleware General Error -> ", err)
-			}
+			c.String(http.StatusInternalServerError, err.Error())
+			log.Print("RateLimitMiddleware General Error -> ", err)
+			c.Abort()
+			return
+		}
+
+		if !ok {
+			c.String(http.StatusTooManyRequests, "you have reached the maximum number of requests or actions allowed within a certain time frame")
 			c.Abort()
 			return
 		}
