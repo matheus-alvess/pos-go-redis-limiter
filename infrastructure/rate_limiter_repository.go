@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/go-redis/redis_rate/v9"
 	"pos-go-redis-limiter/port"
@@ -15,6 +16,8 @@ type rateLimiterRepositoryHandler struct {
 
 func NewRateLimiterRepository(instanceWrapperRedis RedisClient) port.RateLimiterRepository {
 	redisClient := instanceWrapperRedis.Client()
+	fmt.Println("log 0000", redisClient)
+
 	limiter := redis_rate.NewLimiter(redisClient)
 
 	return &rateLimiterRepositoryHandler{
@@ -24,6 +27,8 @@ func NewRateLimiterRepository(instanceWrapperRedis RedisClient) port.RateLimiter
 }
 
 func (r *rateLimiterRepositoryHandler) Allow(ctx context.Context, key string, limit int, duration time.Duration) (bool, error) {
+	fmt.Println("log 1111", r.client)
+	fmt.Println("log", r.client.Incr(ctx, key))
 	val, err := r.client.Incr(ctx, key).Result()
 	if err != nil {
 		return false, err

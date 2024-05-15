@@ -25,6 +25,8 @@ func (suite *RepositoryTestSuite) SetupTest() {
 
 	suite.redisClientMock = mocks.NewMockRedisClient(ctrl)
 	suite.context = context.Background()
+
+	suite.redisClientMock.EXPECT().Client().Return(&redis.Client{}).AnyTimes()
 	suite.repository = NewRateLimiterRepository(suite.redisClientMock)
 }
 
@@ -46,7 +48,8 @@ func (suite *RepositoryTestSuite) TestAllow() {
 	duration := time.Second * 1
 
 	suite.Run("should execute allow with success", func() {
-		suite.redisClientMock.EXPECT().Client().Return(&redis.Client{}).AnyTimes()
+		mockRedisCMD := redis.NewIntCmd(context.Background(), int64(1), nil)
+		suite.redisClientMock.EXPECT().Incr(gomock.Any(), gomock.Any()).Return(mockRedisCMD)
 
 		ok, err := suite.repository.Allow(suite.context, key, limit, duration)
 
