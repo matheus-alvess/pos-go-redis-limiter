@@ -2,13 +2,16 @@ package application
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
 	"net/http"
 	"pos-go-redis-limiter/infrastructure"
 )
 
 func StartupApp(config *infrastructure.Config) *gin.Engine {
-	instanceWrapperRedis := infrastructure.NewRedisClient(config.RedisAddress)
-	redisRepo := infrastructure.NewRateLimiterRepository(instanceWrapperRedis)
+	client := redis.NewClient(&redis.Options{
+		Addr: config.RedisAddress,
+	})
+	redisRepo := infrastructure.NewRateLimiterRepository(client)
 	rateLimiterService := NewRateLimiterService(redisRepo)
 
 	gin.SetMode(gin.ReleaseMode)

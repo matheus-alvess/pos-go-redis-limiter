@@ -1,7 +1,6 @@
 package application
 
 import (
-	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -14,7 +13,6 @@ func RateLimitMiddleware(rateLimiterService port.RateLimiterService, config *inf
 	return func(c *gin.Context) {
 		var (
 			ip        = c.ClientIP()
-			ctx       = context.TODO()
 			apiToken  = c.Request.Header.Get("API_KEY")
 			limitTime = config.IpRateLimitPerSecond
 			keyLock   = ip
@@ -25,7 +23,7 @@ func RateLimitMiddleware(rateLimiterService port.RateLimiterService, config *inf
 			keyLock = fmt.Sprintf("%s:%s", ip, apiToken)
 		}
 
-		ok, err := rateLimiterService.Allow(ctx, keyLock, limitTime, config.GeneralTimeBan)
+		ok, err := rateLimiterService.Allow(keyLock, limitTime, config.GeneralTimeBan)
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
 			log.Print("RateLimitMiddleware General Error -> ", err)

@@ -1,7 +1,6 @@
 package application
 
 import (
-	"context"
 	"pos-go-redis-limiter/port"
 	"time"
 )
@@ -16,6 +15,6 @@ func NewRateLimiterService(rateLimiterRepository port.RateLimiterRepository) por
 	}
 }
 
-func (r *rateLimiterServiceHandler) Allow(ctx context.Context, key string, limit int, duration time.Duration) (bool, error) {
-	return r.rateLimiterRepository.Allow(ctx, key, limit, duration)
+func (r *rateLimiterServiceHandler) Allow(key string, limit int, duration time.Duration) (bool, error) {
+	return r.rateLimiterRepository.Allow(key, limit, duration)
 }

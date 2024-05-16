@@ -2,7 +2,6 @@ package infrastructure
 
 import (
 	"errors"
-	"github.com/joho/godotenv"
 	"os"
 	"strconv"
 	"time"
@@ -16,11 +15,6 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, err
-	}
-
 	redisAddress, ok := os.LookupEnv("REDIS_ADDR")
 	if !ok {
 		return nil, errors.New("REDIS_ADDR config notfound")

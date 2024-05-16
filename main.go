@@ -2,15 +2,21 @@ package main
 
 import (
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"pos-go-redis-limiter/application"
 	"pos-go-redis-limiter/infrastructure"
 )
 
 func main() {
-	config, err := infrastructure.Load()
+	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
+	}
+
+	config, err := infrastructure.Load()
+	if err != nil {
+		log.Fatal("Error loading mapper configs")
 	}
 
 	r := application.StartupApp(config)

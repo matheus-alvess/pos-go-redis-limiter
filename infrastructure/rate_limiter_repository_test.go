@@ -1,12 +1,14 @@
 package infrastructure
 
 import (
-	"context"
-	"github.com/go-redis/redis/v8"
-	"github.com/golang/mock/gomock"
+	"errors"
+	"github.com/alicebob/miniredis"
+	"github.com/elliotchance/redismock"
+	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"pos-go-redis-limiter/infrastructure/mocks"
+	"log"
 	"pos-go-redis-limiter/port"
 	"testing"
 	"time"
@@ -14,46 +16,80 @@ import (
 
 type RepositoryTestSuite struct {
 	suite.Suite
-	context         context.Context
 	repository      port.RateLimiterRepository
-	redisClientMock *mocks.MockRedisClient
+	redisClientMock *redis.Client
 }
 
 func (suite *RepositoryTestSuite) SetupTest() {
-	ctrl := gomock.NewController(suite.T())
-	defer ctrl.Finish()
+	mr, err := miniredis.Run()
+	if err != nil {
+		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
 
-	suite.redisClientMock = mocks.NewMockRedisClient(ctrl)
-	suite.context = context.Background()
-
-	suite.redisClientMock.EXPECT().Client().Return(&redis.Client{}).AnyTimes()
-	suite.repository = NewRateLimiterRepository(suite.redisClientMock)
+	suite.redisClientMock = redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
 }
 
 func TestRunSuite(t *testing.T) {
 	suite.Run(t, new(RepositoryTestSuite))
 }
 
-func (suite *RepositoryTestSuite) TestNewRepository() {
-	suite.Run("success instantiate Repository", func() {
-
-		repository := NewRateLimiterRepository(suite.redisClientMock)
-		assert.NotNil(suite.T(), repository)
-	})
-}
-
 func (suite *RepositoryTestSuite) TestAllow() {
-	key := ""
-	limit := 2
-	duration := time.Second * 1
+	suite.Run("should execute allow with not expired key", func() {
+		key := "123"
+		limit := 2
+		duration := time.Second * 1
 
-	suite.Run("should execute allow with success", func() {
-		mockRedisCMD := redis.NewIntCmd(context.Background(), int64(1), nil)
-		suite.redisClientMock.EXPECT().Incr(gomock.Any(), gomock.Any()).Return(mockRedisCMD)
+		currentRedisMock := redismock.NewNiceMock(suite.redisClientMock)
 
-		ok, err := suite.repository.Allow(suite.context, key, limit, duration)
+		mockRedisCMD := redis.NewIntResult(int64(2), nil)
 
+		currentRedisMock.On("Incr", mock.Anything).Return(mockRedisCMD)
+
+		repository := NewRateLimiterRepository(currentRedisMock)
+
+		ok, err := repository.Allow(key, limit, duration)
 		assert.Nil(suite.T(), err)
 		assert.True(suite.T(), ok)
+	})
+
+	suite.Run("should execute allow with expired key", func() {
+		key := "123"
+		limit := 1
+		duration := time.Second * 1
+
+		currentRedisMock := redismock.NewNiceMock(suite.redisClientMock)
+
+		mockRedisCMD := redis.NewIntResult(int64(1), nil)
+		mockRedisBoolResult := redis.NewBoolResult(true, nil)
+
+		currentRedisMock.On("Incr", mock.Anything).Return(mockRedisCMD)
+		currentRedisMock.On("Expire", mock.Anything, mock.Anything).Return(mockRedisBoolResult)
+
+		repository := NewRateLimiterRepository(currentRedisMock)
+
+		ok, err := repository.Allow(key, limit, duration)
+		assert.Nil(suite.T(), err)
+		assert.True(suite.T(), ok)
+	})
+
+	suite.Run("should execute allow with failed", func() {
+		key := "123"
+		limit := 2
+		duration := time.Second * 1
+
+		currentRedisMock := redismock.NewNiceMock(suite.redisClientMock)
+
+		expectedErr := errors.New("mock error")
+		mockRedisCMD := redis.NewIntResult(int64(0), expectedErr)
+
+		currentRedisMock.On("Incr", mock.Anything).Return(mockRedisCMD)
+
+		repository := NewRateLimiterRepository(currentRedisMock)
+
+		_, err := repository.Allow(key, limit, duration)
+		assert.NotNil(suite.T(), err)
+		assert.Equal(suite.T(), "mock error", err.Error())
 	})
 }
