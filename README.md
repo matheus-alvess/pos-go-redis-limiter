@@ -24,6 +24,20 @@ Para executar o projeto localmente, utilize o comando:
 go run ./main.go
 ```
 
+## Como testar manualmente?
+
+Para testar manualmente via *IP* basta executar
+
+```sh
+curl --location 'http://localhost:8080/'
+```
+
+Para testar manualmente via *API_KEY* basta executar
+
+```sh
+curl --location 'http://localhost:8080/?API_KEY=mykey-123'
+```
+
 ## Executar o Projeto Dentro do Docker Manualmente (not recommend)
 
 1. **Buildar a Imagem Docker**:
