@@ -2,7 +2,7 @@
 
 ## Executar com Docker Compose
 
-Para iniciar uma instância do Redis localmente na porta configurada, execute o seguinte comando:
+Para iniciar a app e o redis com docker execute o seguinte comando:
 
 ```sh
 docker-compose up -d
@@ -24,7 +24,7 @@ Para executar o projeto localmente, utilize o comando:
 go run ./main.go
 ```
 
-## Executar o Projeto Dentro do Docker
+## Executar o Projeto Dentro do Docker Manualmente (not recommend)
 
 1. **Buildar a Imagem Docker**:
 
