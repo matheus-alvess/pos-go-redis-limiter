@@ -15,7 +15,7 @@ services:
       - "8080:8080"
     container_name: pos-go-redis-limiter
     environment:
-      - REDIS_ADDR=172.23.0.2:6379
+      - REDIS_ADDR=redis:6379
     networks:
       - my-network
     depends_on:
